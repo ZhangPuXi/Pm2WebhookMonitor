@@ -1,6 +1,7 @@
 const pm2  = require( 'pm2'  );
 const pmx  = require( 'pmx'  );
 const bent = require( 'bent' );
+const os   = require( 'os'   );
 
 const moduleConfig = pmx.initModule();
 const moduleName   = 'pm2-webhook-monitor';
@@ -13,6 +14,28 @@ function formUrlEncode( data ) {
   } );
 
   return result.join( '&' );
+}
+
+function getLocalIpAddress() {
+  let result;
+
+  const network = os.networkInterfaces();
+
+  for ( let key in network ) {
+    const networkUnit = network[ key ];
+
+    networkUnit.map( ( item ) => {
+      if ( item.family === 'IPv4' && !item.internal ) {
+        result = item.address;
+      }
+    } );
+  }
+
+  if ( !result ) {
+    result = 'Unknown IP Address';
+  }
+
+  return result;
 }
 
 function notify( message ) {
@@ -30,7 +53,9 @@ function notify( message ) {
   }
 
   const keywordList = [
-    `应用名称：${ message.name }`, `事件类型：${ message.event }`
+    `IP 地址：${ getLocalIpAddress() }`,
+    `应用名称：${ message.name }`,
+    `事件类型：${ message.event }`
   ];
 
   if ( message.timestamp ) {
@@ -59,7 +84,7 @@ function parseProcessName( process ) {
 
   result = process.name;
 
-  if ( process.exec_mode === 'cluster_mode' && process.instances > 1 ) {
+  if ( process.exec_mode === 'cluster_mode' ) {
     result += `[${ process.pm_id }]`;
   }
 
