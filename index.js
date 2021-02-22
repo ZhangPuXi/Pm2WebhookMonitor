@@ -129,10 +129,22 @@ function listenKill( bus ) {
 function listenException( bus ) {
   bus.on( 'process:exception', function ( data ) {
     if ( data.process.name !== moduleName ) {
+      let message;
+
+      if ( data.data && data.data.message ) {
+        message = data.data.message;
+      } else {
+        message = JSON.stringify( data.data );
+      }
+
+      if ( message.length > 100 ) {
+        message = message.slice( 0, 100 );
+      }
+
       notify( {
         name        : parseProcessName( data.process ),
         event       : 'exception',
-        description : JSON.stringify( data.data ),
+        description : message,
         timestamp   : ( new Date() ).getTime()
       } );
     }
