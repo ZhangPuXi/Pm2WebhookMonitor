@@ -63,8 +63,8 @@ pm2 set pm2-webhook-monitor:<key> <value>
 
 ```
 
-## Ackownledgements
+## Acknowledgements
 
 - [pm2-slack](https://github.com/mattpker/pm2-slack) : This project inspired me to create this module, thanks to every one contributes to this project, thanks for their hard-working and open source spirit.
 
-- [sailor103](https://github.com/sailor103) : This is one of my best friends, he lets me know the `pm2-slack`, and he often plays the duck role in my rubber duck debugging. Thanks for his time and love(just love between friends, I'm not a gay, but I'm not sure if he is a gay :smirk: ).
+- [sailor103](https://github.com/sailor103) : This is one of my best friends, he introduced the `pm2-slack` project to me, and he often plays the duck role in my rubber duck debugging. Thanks for his time and love(just love between friends, I'm not a gay, but I'm not sure if he is a gay :smirk: ).
