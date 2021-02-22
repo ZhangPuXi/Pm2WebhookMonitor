@@ -91,13 +91,29 @@ function parseProcessName( process ) {
   return result;
 }
 
+function processLogMessage( message ) {
+  let result;
+
+  if ( typeof message === 'string' ) {
+    result = message;
+  } else {
+    result = '';
+  }
+
+  if ( result.length > 100 ) {
+    result = result.slice( 0, 100 );
+  }
+
+  return result;
+}
+
 function listenLog( bus ) {
   bus.on( 'log:out', function ( data ) {
     if ( data.process.name !== moduleName ) {
       notify( {
         name        : parseProcessName( data.process ),
         event       : 'log',
-        description : data.data
+        description : processLogMessage( data.data )
       } );
     }
   } );
@@ -109,7 +125,7 @@ function listenError( bus ) {
       notify( {
         name        : parseProcessName( data.process ),
         event       : 'error',
-        description : data.data
+        description : processLogMessage( data.data )
       } );
     }
   } );
@@ -120,7 +136,7 @@ function listenKill( bus ) {
     notify( {
       name        : 'PM2',
       event       : 'kill',
-      description : data.msg,
+      description : processLogMessage( data.msg ),
       timestamp   : ( new Date() ).getTime()
     } );
   } );
@@ -131,15 +147,19 @@ function listenException( bus ) {
     if ( data.process.name !== moduleName ) {
       let message;
 
-      if ( data.data && data.data.message ) {
-        message = data.data.message;
-      } else {
-        message = JSON.stringify( data.data );
+      if ( data.data ) {
+        if ( data.data.message ) {
+          message = data.data.message;
+        } else {
+          try {
+            message = JSON.stringify( data.data );
+          } catch ( exception ) {
+            message = Object.prototype.toString.call( data.data );
+          }
+        }
       }
 
-      if ( message.length > 100 ) {
-        message = message.slice( 0, 100 );
-      }
+      message = processLogMessage( message );
 
       notify( {
         name        : parseProcessName( data.process ),
@@ -159,7 +179,7 @@ function listenProcessEvent( bus ) {
       notify( {
         name        : parseProcessName( data.process ),
         event       : data.event,
-        description : '',
+        description : `A ${ data.event } event is occurred.`,
         timestamp   : ( new Date() ).getTime()
       } );
     }
