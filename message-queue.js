@@ -33,7 +33,8 @@ class MessageQueue {
     }
 
     this.scheduler.schedule( () => {
-      this.notifier.notifyAll( this.queuedMessage );
+      this.notifier.notifyAll( [ ...this.queuedMessage ] );
+      this.queuedMessage = [];
     } );
   }
 }
