@@ -1,6 +1,6 @@
 {
   "name": "pm2-webhook-monitor",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "A pm2 monitor which sends log messages to webhook url.",
   "main": "index.js",
   "scripts": {
@@ -32,6 +32,8 @@
     "exit": false,
     "start": false,
     "online": false,
-    "phone": null
+    "phone": null,
+    "bufferMaxSecond" : 5,
+    "buffer" : true
   }
 }

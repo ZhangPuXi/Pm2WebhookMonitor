@@ -1,83 +1,10 @@
-const pm2  = require( 'pm2'  );
-const pmx  = require( 'pmx'  );
-const bent = require( 'bent' );
-const os   = require( 'os'   );
+const pm2          = require( 'pm2'                );
+const pmx          = require( 'pmx'                );
+const MessageQueue = require( './message-queue.js' );
 
-const moduleConfig = pmx.initModule();
-const moduleName   = 'pm2-webhook-monitor';
-
-function formUrlEncode( data ) {
-  const result = [];
-
-  Object.keys( data ).map( ( item ) => {
-    result.push( `${ item }=${ data[ item ] }` );
-  } );
-
-  return result.join( '&' );
-}
-
-function getLocalIpAddress() {
-  let result;
-
-  const network = os.networkInterfaces();
-
-  for ( let key in network ) {
-    const networkUnit = network[ key ];
-
-    networkUnit.map( ( item ) => {
-      if ( item.family === 'IPv4' && !item.internal ) {
-        result = item.address;
-      }
-    } );
-  }
-
-  if ( !result ) {
-    result = 'Unknown IP Address';
-  }
-
-  return result;
-}
-
-function notify( message ) {
-  const requestJson = bent( 'json', {
-    'Content-Type' : 'application/x-www-form-urlencoded'
-  } );
-
-  const notifyUrl = moduleConfig.webhookUrl;
-  const phoneList = [];
-
-  if ( typeof moduleConfig.phone === 'string' ) {
-    phoneList.push( ...moduleConfig.phone.split( ',' ) );
-  } else if ( typeof moduleConfig.phone === 'number' ) {
-    phoneList.push( moduleConfig.phone );
-  }
-
-  const keywordList = [
-    `IP 地址：${ getLocalIpAddress() }`,
-    `应用名称：${ message.name }`,
-    `事件类型：${ message.event }`
-  ];
-
-  if ( message.timestamp ) {
-    keywordList.push(
-      `发生时间：${ new Date( message.timestamp ).toLocaleString() }`
-    );
-  }
-
-  const requestOption = {
-    templateid : 'NXGbDMj6FRpHw3hu3RlArM80B6pF_s7FVFalUxp7zXU',
-    first      : encodeURIComponent( message.description ),
-    keywordStr : encodeURIComponent( JSON.stringify( keywordList ) )
-  };
-
-  phoneList.map( ( item ) => {
-    requestOption.phone = item;
-
-    requestJson(
-      notifyUrl + '?' + formUrlEncode( requestOption )
-    );
-  } );
-}
+const moduleConfig    = pmx.initModule();
+const moduleName      = 'pm2-webhook-monitor';
+const messageQueueMap = {};
 
 function parseProcessName( process ) {
   let result;
@@ -107,10 +34,20 @@ function processLogMessage( message ) {
   return result;
 }
 
+function getMessageQueueSingleton( processName ) {
+  if ( !messageQueueMap[ processName ] ) {
+    messageQueueMap[ processName ] = new MessageQueue( moduleConfig );
+  }
+
+  return messageQueueMap[ processName ];
+}
+
 function listenLog( bus ) {
   bus.on( 'log:out', function ( data ) {
+    const messageQueue = getMessageQueueSingleton( data.process.name );
+
     if ( data.process.name !== moduleName ) {
-      notify( {
+      messageQueue.addMessage( {
         name        : parseProcessName( data.process ),
         event       : 'log',
         description : processLogMessage( data.data )
@@ -121,8 +58,10 @@ function listenLog( bus ) {
 
 function listenError( bus ) {
   bus.on( 'log:err', function ( data ) {
+    const messageQueue = getMessageQueueSingleton( data.process.name );
+
     if ( data.process.name !== moduleName ) {
-      notify( {
+      messageQueue.addMessage( {
         name        : parseProcessName( data.process ),
         event       : 'error',
         description : processLogMessage( data.data )
@@ -133,7 +72,9 @@ function listenError( bus ) {
 
 function listenKill( bus ) {
   bus.on( 'pm2:kill', function ( data ) {
-    notify( {
+    const messageQueue = getMessageQueueSingleton( 'PM2' );
+
+    messageQueue.addMessage( {
       name        : 'PM2',
       event       : 'kill',
       description : processLogMessage( data.msg ),
@@ -144,6 +85,8 @@ function listenKill( bus ) {
 
 function listenException( bus ) {
   bus.on( 'process:exception', function ( data ) {
+    const messageQueue = getMessageQueueSingleton( data.process.name );
+
     if ( data.process.name !== moduleName ) {
       let message;
 
@@ -161,7 +104,7 @@ function listenException( bus ) {
 
       message = processLogMessage( message );
 
-      notify( {
+      messageQueue.addMessage( {
         name        : parseProcessName( data.process ),
         event       : 'exception',
         description : message,
@@ -175,8 +118,10 @@ function listenProcessEvent( bus ) {
   bus.on( 'process:event', function ( data ) {
     // throw new Error( typeof moduleConfig.phone );
 
+    const messageQueue = getMessageQueueSingleton( data.process.name );
+
     if ( moduleConfig[ data.event ] && data.process.name !== moduleName ) {
-      notify( {
+      messageQueue.addMessage( {
         name        : parseProcessName( data.process ),
         event       : data.event,
         description : `A ${ data.event } event is occurred.`,
