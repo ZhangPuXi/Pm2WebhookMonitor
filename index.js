@@ -22,13 +22,13 @@ function processLogMessage( message ) {
   let result;
 
   if ( typeof message === 'string' ) {
-    result = message;
+    result = message.replace( /\[\d+(;\d+)?m/g, '' );
   } else {
     result = '';
   }
 
-  if ( result.length > 100 ) {
-    result = result.slice( 0, 100 );
+  if ( result.length > 500 ) {
+    result = result.slice( 0, 500 );
   }
 
   return result;
