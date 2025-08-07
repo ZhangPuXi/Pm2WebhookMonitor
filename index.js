@@ -22,7 +22,7 @@ function processLogMessage( message ) {
   let result;
 
   if ( typeof message === 'string' ) {
-    result = message.replace( /\[\d+(;\d+)?m/g, '' );
+    result = message.replace( /\[\d+(;\d+)*m/g, '' );
   } else {
     result = '';
   }
